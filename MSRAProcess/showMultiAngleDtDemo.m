@@ -3,7 +3,7 @@
 clear all;
 
 %% dirs and files
-datasetName = 'MSRATD500';
+datasetName = 'MSRAEng';
 testDataBase = fullfile('/home/lili/datasets/VOC/VOCdevkit', datasetName);
 testListName = fullfile(testDataBase, 'ImageSets/Main/test.txt');
 imgDir = fullfile(testDataBase,'JPEGImages');

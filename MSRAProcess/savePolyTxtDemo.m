@@ -4,30 +4,35 @@ clear all;
 
 %% dirs and files
 datasetName = 'MSRATD500';
-testDataBase = fullfile('/home/lili/datasets/VOC/VOCdevkit', datasetName);
-testListName = fullfile(testDataBase, 'ImageSets/Main/test.txt');
-imgDir = fullfile(testDataBase,'JPEGImages');
-[imgName] = textread(testListName,'%s');
+testBase = fullfile('/home/lili/datasets', datasetName);
+imgDir = fullfile(testBase, 'img', 'test');
+
+%testDataBase = fullfile('/home/lili/datasets/VOC/VOCdevkit', datasetName);
+%testListName = fullfile(testDataBase, 'ImageSets/Main/test.txt');
+%imgDir = fullfile(testDataBase,'JPEGImages');
+%[imgName] = textread(testListName,'%s');
 ssdDir = '/home/lili/codes/ssd/caffe-ssd/data/';
 dtDir = fullfile(ssdDir, datasetName, 'test_bb');
 destDtDir = fullfile(ssdDir, datasetName, 'test_poly');
 
-nImg = length(imgName);
+imgFiles = dir(fullfile(imgDir, '*.jpg'));
+nImg = length(imgFiles);
 for i = 1:nImg
-%     if i < 4
+%     if i < 3
 %         continue;
 %     end
 %         if ~strcmp(imgName{i}, 'IMG_0607')
 %             continue;
 %         end
-    fprintf('%d:%s\n', i, imgName{i});
-    dtFile = fullfile(dtDir, ['res_', imgName{i}, '.txt']);
+    imgRawName = imgFiles(i).name;
+    fprintf('%d:%s\n', i, imgRawName);
+    dtFile = fullfile(dtDir, ['res_', imgRawName(1:end-3), 'txt']);
     dtBox = importdata(dtFile); % x1, y1, x2, y2
     if ~isempty(dtBox)
         dtBox(:, 3) = dtBox(:, 3) - dtBox(:, 1);
         dtBox(:, 4) = dtBox(:, 4) - dtBox(:, 2);
     end
-    image = imread(fullfile(imgDir, [imgName{i}, '.jpg'])  );
+    image = imread(fullfile(imgDir, imgRawName)  );
     nDt = size(dtBox, 1);
     [imgH, imgW, D] = size(image);
     
@@ -57,12 +62,18 @@ for i = 1:nImg
         
         % nms on dtBox
         tempBox = angleBoxes;
-        tempBox(:, 5) = 1./tempBox(:, 4);
+        % tempBox(:, 5) = 1./tempBox(:, 4);
+        tempBox(:, 5) = dtBox(:, 6);
 %         imshow(image);
 %         displayBox(tempBox);
-        tempBox = bbNms(tempBox,'type','cover','overlap', 0.7);
+
+        tempBox = bbNms(tempBox,'type','cover','overlap', 0.8);
+%         imshow(image);
+%         displayBox(tempBox, 'g', 'u');               
+        %tempBox = tempBox(tempBox(:, 5) > 0.5, :);
+        tempBox = tempBox(tempBox(:, 5) > 2.5, :); %0.5
         tempBox(:, 5) = 1./tempBox(:, 4);
-        nmsBox = bbNms(tempBox,'type','maxg','overlap', 0.25);
+        nmsBox = bbNms(tempBox,'type','max','overlap', 0.25); %0.3
         
         % get angles of nmsBox
         keys = myHash(nmsBox);
@@ -86,7 +97,7 @@ for i = 1:nImg
 %     %displayPoly(polys, 'g');
 %     displayPoly(newPolys, 'r');
     %% save to dt txt
-    destTestFile = fullfile(destDtDir, ['res_', imgName{i}, '.txt']);
+    destTestFile = fullfile(destDtDir, ['res_', imgRawName(1:end-3), 'txt']);
     newPolys = round(newPolys);
      fp = fopen(destTestFile, 'wt');
     nPoly = size(newPolys, 1);
